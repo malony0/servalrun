@@ -18,15 +18,26 @@ const INTERVAL =200;
 var X=0,Y=0; //画像の位置
 var VX=0, VY=0; //画像の速度 
 var MX=0, MY=0; //マウス位置
+var relTX=0, relTY=0; //タップ位置(相対)
 var dir=0; //0~7サーバルちゃんの向き。東側は+4,南(=0)から北上するごとに+1
 var count=0;
 var wW,wH; //ウィンドウサイズ
 
 var moveFlg=0;
+var isPc=0;
 
 var startTime = new Date().getTime(); //描画開始時刻
 var currentTime; //現在時刻
 var status; //更新からどれだけ経ったか
+
+//PC判別 iOSとAndroid以外は知らん
+(function(){
+    if(!navigator.userAgent.match(/(iPhone|iPad|iPod|Android)/)){
+	isPc=1;
+    }else{
+	document.getElementById("titleimg").src="src/title2.png";
+    }
+})();
 
 //画像の読み込み（ぽ）
 /*==============
@@ -65,24 +76,32 @@ charImage[21].src="src/ne0.png";
 charImage[22].src="src/ne1.png";
 charImage[23].src="src/ne2.png";
 
-/*==========================================*/
-//メインループ
-/*==========================================*/
+
 (function(){
     window.onclick=function(){
 	document.getElementById("title").innerHTML="";
     }
+    window.ontouchstart=function(){
+	document.getElementById("title").innerHTML="";
+    }
+    
 })();
 
 getWindowSize();
 
+/*==========================================*/
+//メインループ
+/*==========================================*/
+
 (function loop(){
     //位置確認
     getCharImagePos();
+    updateMouseByTouch();     //マウス位置更新（スマホのみ）
     getDirection();
     //再描画
     if(moveFlg==1){
-	moveCharImage();
+	updateCharImageSpeed();
+	updateCharImagePos();
     }
     drawCharImage();
     //	document.getElementById("output3").innerHTML="status:"+status+", count:"+count;
@@ -109,24 +128,43 @@ function getWindowSize(){
     wW=window.innerWidth;
     wH=window.innerHeight;
     
-    //	document.getElementById("output6").innerHTML=wW+"*"+wH;
+  // document.getElementById("output6").innerHTML=wW+"*"+wH;
 }
 
 //マウス位置取得
 function getMousePos(e){
     if(!e) e=window.event;
     
-    MX=e.clientX;
-    MY=e.clientY;
+    MX=e.pageX;
+    MY=e.pageY;
     
     //	document.getElementById("output1").innerHTML=MX+","+MY;
 }
 
+//タップ位置取得
+function getTouchPos(e){
+    if(!e) e=window.event;
+
+    relTX=e.touches[0].pageX-X;
+    relTY=e.touches[0].pageY-Y;
+
+   //  document.getElementById("output10").innerHTML=relTX+","+relTY;
+}
+
+//タップ位置からマウス位置を更新
+function updateMouseByTouch(){
+    if(relTX!=0 || relTY!=0){
+	MX=X+relTX;
+	MY=X+relTY;
+    }
+}
+
+
 //画像位置取得
 function getCharImagePos(){
     var rect=document.getElementById("serval").getBoundingClientRect();
-    X=rect.left;
-    Y=rect.top;
+    X=rect.left + window.pageXOffset;
+    Y=rect.top + window.pageYOffset;
     
     //	document.getElementById("output5").innerHTML="X:"+X+", Y;"+Y;
 }
@@ -134,6 +172,7 @@ function getCharImagePos(){
 //画像から見たマウス方向
 function getDirection(){
     dir=0;
+    
     if(MX>X+IMAGE_WIDTH-ADJUST) dir+=4;
     if(X+ADJUST<=MX && MX<=X+IMAGE_WIDTH-ADJUST){
 	if(MY<Y) dir=4;
@@ -159,9 +198,8 @@ function drawCharImage(){
     }
 }
 
-//サーバルちゃんを動かす
-function moveCharImage(){
-    //速度更新
+//速度更新
+function updateCharImageSpeed(){
     var DX=MX-(X+IMAGE_WIDTH/2),
 	DY=MY-(Y+IMAGE_WIDTH/2),
 	R=Math.ceil(Math.sqrt(DX*DX+DY*DY)),
@@ -170,47 +208,55 @@ function moveCharImage(){
 	nX,
 	nY;
     
-    var imageStyle= document.getElementById("serval").style;
-    
     if(nVX<=MAX_SPEED && nVX>=(-1)*MAX_SPEED){
 	VX=nVX;
     }
     if(nVY<=MAX_SPEED && nVY>=(-1)*MAX_SPEED){
 	VY=nVY;
     }
+}
+
+//位置更新
+function updateCharImagePos(){
+    var imageStyle= document.getElementById("serval").style;
     
-    //位置更新
     nX=X+VX/50;
     nY=Y+VY/50;
-    if(X<0 || Y<0 || X+IMAGE_WIDTH>wW || Y+IMAGE_WIDTH>wH){
-	//範囲外に出てたら戻す
-	imageStyle.left=0+"px";
-	imageStyle.top=0+"px";
-    } else{
-	if(nX>=0 && nX+IMAGE_WIDTH<=wW){
-	    imageStyle.left=nX + "px";
-	}
-	if(nY>=0 && nY+IMAGE_WIDTH<=wH){
-	    imageStyle.top=nY + "px";
-	}
+
+    //範囲外に出てたら戻す
+    if(nX<0){
+	nX=0;
     }
+    if(nY<0){
+	nY=0;
+    }
+    if(nX+IMAGE_WIDTH>wW){
+	nX=wW-IMAGE_WIDTH;
+    }
+    if(nY+IMAGE_WIDTH>wH){
+	nY=wH-IMAGE_WIDTH;
+    }
+
+    //更新
+    imageStyle.left=nX + "px";
+    imageStyle.top=nY + "px";
+    
     
     //	document.getElementById("output4").innerHTML="VX:"+VX+", VY:"+VY;
 }
 
 
-
 /*==========================================*/
 //EventListen
 /*==========================================*/
-if(document.addEventListener){
-    document.addEventListener("mousemove",getMousePos,false);
-    document.addEventListener("click",function(){moveFlg=(moveFlg+1)%2;},false);
-    window.addEventListener("resize",getWindowSize,false);
-}else if(document.attachEvent){
-    document.attachEvent("onmousemove",getMousePos,false);
-    document.addEventListener("onclick",function(){moveFlg=(moveFlg+1)%2;},false);
-    window.addEventListener("onresize",getWindowSize,false);
-}
+document.addEventListener("touchstart",function(){moveFlg=1;},false);
+document.addEventListener("touchstart",getTouchPos,false);
+document.addEventListener("touchmove",getTouchPos,false);
+document.addEventListener("touchend",function(){moveFlg=0;},false);
+document.addEventListener("touchcancel",function(){moveFlg=0;},false);
+document.addEventListener("mousemove",getMousePos,false);
+document.addEventListener("mouseup", function(){ moveFlg=(moveFlg+1)%2; }, false);
+window.addEventListener("resize",getWindowSize,false);
+
 
 
