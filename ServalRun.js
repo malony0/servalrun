@@ -82,6 +82,7 @@ charImage[23].src="src/ne2.png";
 	document.getElementById("title").innerHTML="";
     }
     window.ontouchstart=function(){
+	moveFlg=1;
 	document.getElementById("title").innerHTML="";
     }
     
@@ -251,12 +252,12 @@ function updateCharImagePos(){
 /*==========================================*/
 document.addEventListener("touchstart",function(){moveFlg=1;},false);
 document.addEventListener("touchstart",getTouchPos,false);
-document.addEventListener("touchmove",getTouchPos,false);
-document.addEventListener("touchend",function(){moveFlg=0;},false);
-document.addEventListener("touchcancel",function(){moveFlg=0;},false);
+document.addEventListener("touchmove",getTouchPos,{passive: false});
+document.body.addEventListener("touchmove", function(e){e.preventDefault();},{passive:false}); //スクロール無効
 document.addEventListener("mousemove",getMousePos,false);
-document.addEventListener("mouseup", function(){ moveFlg=(moveFlg+1)%2; }, false);
+document.addEventListener("mouseup", function(){ if(isPc==1){moveFlg=(moveFlg+1)%2;} }, false);
 window.addEventListener("resize",getWindowSize,false);
+
 
 
 
